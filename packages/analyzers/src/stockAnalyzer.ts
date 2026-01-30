@@ -2,6 +2,7 @@ import type { Report, ReportSource } from '../../core/src/report';
 import { getUsQuoteYahoo } from '../../data-sources/src/us/yahoo';
 import { getCnQuoteEastmoney } from '../../data-sources/src/cn/eastmoney';
 import { getCnNewsAndAnnouncementsEastmoney } from '../../data-sources/src/cn/eastmoney_newsbulletin';
+import { getCnNoticeDetailEastmoney } from '../../data-sources/src/cn/eastmoney_notice';
 import { getHotTopics } from './hotTopics';
 import { extractCnAnnouncement } from './extractors/cnAnnouncementExtractor';
 import { getYahooSymbolNews } from '../../data-sources/src/news/yahoo_symbol';
@@ -123,19 +124,37 @@ export async function analyzeStock(
       }
 
       if (announcements.length) {
+        // 拉公告正文（比F10摘要更完整），失败则降级用F10 content
+        const enriched = await Promise.all(
+          announcements.map(async (a) => {
+            try {
+              const d = await getCnNoticeDetailEastmoney(a.artCode);
+              return {
+                ...a,
+                title: d.title ?? a.title,
+                noticeDate: d.noticeDate ?? a.noticeDate,
+                content: d.content ?? a.content,
+              };
+            } catch {
+              return a;
+            }
+          })
+        );
+
         bullets.push('近期公告（东方财富F10）：');
-        for (const it of announcements) {
+        for (const it of enriched) {
           bullets.push(`- ${it.title}`);
           sources.push({ title: it.title, url: it.url, vendor: 'eastmoney_f10', timestamp: it.noticeDate });
         }
 
         // 结构化提炼（投研证据链）
         bullets.push('公告要点提炼（规则版）：');
-        for (const it of announcements) {
+        for (const it of enriched) {
           const ex = extractCnAnnouncement(it.title, it.content);
           bullets.push(`- ${ex.type}：${ex.title}`);
           for (const kp of ex.keyPoints.slice(0, 2)) bullets.push(`  - ${kp}`);
-          const fieldPairs = Object.entries(ex.fields).slice(0, 3);
+
+          const fieldPairs = Object.entries(ex.fields).slice(0, 6);
           for (const [k, v] of fieldPairs) bullets.push(`  - ${k}：${v}`);
 
           const nums = ex.numbers.slice(0, 3).map((n) => `${n.name}:${n.value}`).join('，');

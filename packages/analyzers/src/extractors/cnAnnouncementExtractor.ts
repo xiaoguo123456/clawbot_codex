@@ -52,7 +52,10 @@ function extractNumbers(text: string): Array<{ name: string; value: string }> {
 
 function pick(text: string, re: RegExp): string | undefined {
   const m = text.match(re);
-  return m?.[1] ? String(m[1]).trim() : undefined;
+  if (!m) return undefined;
+  // Prefer the last capturing group if present (helps with patterns that include an optional leading group)
+  const g = m.length > 2 ? m[m.length - 1] : m[1];
+  return g ? String(g).trim() : undefined;
 }
 
 function extractFields(type: string, text: string): Record<string, string> {
@@ -60,23 +63,68 @@ function extractFields(type: string, text: string): Record<string, string> {
   if (!text) return fields;
 
   if (type === '股份回购') {
-    const amountRange = pick(text, /回购资金总额[^\d]{0,10}(\d+(?:\.\d+)?\s*(?:万|亿)?\s*元\s*[-—~至]\s*\d+(?:\.\d+)?\s*(?:万|亿)?\s*元)/);
-    if (amountRange) fields['回购金额区间'] = amountRange;
+    // 预计回购金额：人民币 15亿元（含）～人民币30亿元（含）
+    const amountRange =
+      pick(
+        text,
+        /预计回购金额[^\d]{0,30}((?:人民币\s*)?[\d,]+(?:\.\d+)?\s*(?:万|亿)?元?(?:（含）)?\s*[—\-~至～]\s*(?:人民币\s*)?[\d,]+(?:\.\d+)?\s*(?:万|亿)?元?(?:（含）)?)/
+      ) ||
+      pick(
+        text,
+        /回购金额[^\d]{0,30}((?:人民币\s*)?[\d,]+(?:\.\d+)?\s*(?:万|亿)?元?(?:（含）)?\s*[—\-~至～]\s*(?:人民币\s*)?[\d,]+(?:\.\d+)?\s*(?:万|亿)?元?(?:（含）)?)/
+      );
+    if (amountRange) fields['回购金额区间'] = amountRange.replace(/\s+/g, '');
 
-    const amountMax = pick(text, /回购资金总额[^\d]{0,10}[^\d]*(\d+(?:\.\d+)?\s*(?:万|亿)?\s*元)/);
-    if (!fields['回购金额区间'] && amountMax) fields['回购金额'] = amountMax;
+    // 单值金额（如：回购金额不低于xx亿元）
+    const amountSingle =
+      pick(text, /(回购金额|回购资金总额)[^\d]{0,30}([\d,]+(?:\.\d+)?\s*(?:万|亿)?元?)/) ||
+      pick(text, /预计回购金额[^\d]{0,30}([\d,]+(?:\.\d+)?\s*(?:万|亿)?元?)/);
+    if (!fields['回购金额区间'] && amountSingle) fields['回购金额'] = amountSingle.replace(/\s+/g, '');
 
-    const priceCeil = pick(text, /回购价格[^\d]{0,10}(\d+(?:\.\d+)?)\s*元\/?股/);
+    // 价格上限
+    const priceCeil = pick(
+      text,
+      /(回购价格上限|回购价格不超过|回购价格不高于|回购价格上限为)[^\d]{0,30}([\d,]+(?:\.\d+)?)\s*元\/?股/
+    );
     if (priceCeil) fields['回购价格上限'] = `${priceCeil}元/股`;
 
-    const sharesRange = pick(text, /回购股份数量[^\d]{0,10}(\d+(?:\.\d+)?\s*(?:万|亿)?\s*股\s*[-—~至]\s*\d+(?:\.\d+)?\s*(?:万|亿)?\s*股)/);
-    if (sharesRange) fields['回购股份区间'] = sharesRange;
+    // 期限：用 lookahead 防止吞掉下一段字段名
+    const period = pick(
+      text,
+      /(回购方案实施期限|回购方案实施期间|回购期限|实施期限)\s*([^]{0,120}?)(?=预计回购金额|回购金额|回购用途|累计已回购|实际回购价格区间|$)/
+    );
+    if (period) fields['回购期限'] = period.replace(/\s+/g, ' ').trim();
 
-    const period = pick(text, /回购期限[^\d]{0,20}([^。；;\n]{2,30})/);
-    if (period) fields['回购期限'] = period;
+    // 用途：优先识别 √ 勾选项（若解析不到再做关键词兜底）
+    const checked = [...text.matchAll(/√\s*([^□√]{2,30}?)(?=\s{1,}|□|$|回购用途)/g)]
+      .map((m) => String(m[1] ?? '').trim())
+      .filter(Boolean)
+      .slice(0, 4);
 
-    const progress = pick(text, /(已回购[^。；;\n]{5,80})/);
-    if (progress) fields['回购进度'] = progress;
+    if (checked.length) {
+      fields['回购用途'] = checked.join('、');
+    } else {
+      const uses: string[] = [];
+      if (/减少注册资本/.test(text)) uses.push('减少注册资本');
+      if (/员工持股计划/.test(text)) uses.push('员工持股计划');
+      if (/股权激励/.test(text)) uses.push('股权激励');
+      if (/转换公司可转债/.test(text)) uses.push('可转债');
+      if (/维护公司价值/.test(text)) uses.push('维护公司价值及股东权益');
+      if (uses.length) fields['回购用途'] = uses.join('、');
+    }
+
+    // 进度：累计/已回购
+    const boughtShares = pick(text, /(累计已回购股数|已回购股份)[^\d]{0,30}([\d,]+(?:\.\d+)?\s*(?:万|亿)?\s*股)/);
+    if (boughtShares) fields['已回购股份'] = boughtShares.replace(/\s+/g, '');
+
+    const paid = pick(text, /(累计已回购金额|已支付的总金额|支付总金额|已支付金额)[^\d]{0,30}([\d,]+(?:\.\d+)?\s*(?:万|亿)?\s*元)/);
+    if (paid) fields['已回购金额'] = paid.replace(/\s+/g, '');
+
+    const priceRange = pick(text, /(实际回购价格区间)[^\d]{0,30}([\d,]+(?:\.\d+)?\s*元\/?股[^\d]{0,10}[—\-~至～]\s*[\d,]+(?:\.\d+)?\s*元\/?股)/);
+    if (priceRange) fields['实际回购价格区间'] = priceRange.replace(/\s+/g, '');
+
+    const progressSentence = pick(text, /(截至\s*\d{4}年\d{1,2}月\d{1,2}日[^。；;\n]{10,160})/);
+    if (progressSentence) fields['回购进度'] = progressSentence;
   }
 
   if (type === '股东增持') {
