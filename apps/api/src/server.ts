@@ -61,7 +61,7 @@ app.get('/hot', async (req, reply) => {
   try {
     // market scope: use dedicated market hot sectors
     if (q.scope === 'market') {
-      const data = await getMarketHotSectors(Math.min(10, q.limit));
+      const data = await getMarketHotSectors(Math.min(3, q.limit));
       return { ok: true, data };
     }
 
@@ -76,7 +76,7 @@ app.get('/hot', async (req, reply) => {
 app.get('/hot/market', async (req, reply) => {
   const q = z
     .object({
-      limit: z.coerce.number().int().min(1).max(20).default(5),
+      limit: z.coerce.number().int().min(1).max(10).default(3),
     })
     .parse((req as any).query);
 

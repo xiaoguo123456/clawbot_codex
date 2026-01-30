@@ -24,7 +24,7 @@ function lineFor(item: CnSectorRankItem, metric: CnSectorMetric): string {
   return `${item.name}：涨跌幅 ${fmtPct(item.changePercent)}${leader}`;
 }
 
-export async function getMarketHotSectors(limit = 5): Promise<{
+export async function getMarketHotSectors(limit = 3): Promise<{
   industry: { change: CnSectorRankItem[]; money: CnSectorRankItem[]; amount: CnSectorRankItem[] };
   concept: { change: CnSectorRankItem[]; money: CnSectorRankItem[]; amount: CnSectorRankItem[] };
   report: Report;

@@ -29,8 +29,8 @@ Hot topics
   - topics[]：title/score/why + sectors/assets（若有）
 
 Market hot sectors (A股板块热点，独立来源)
-- GET /hot/market?limit=5
-- GET /hot?scope=market&limit=5
+- GET /hot/market?limit=3
+- GET /hot?scope=market&limit=3
   - 返回：{ ok: true, data: { industry, concept, report } }
   - industry/concept：分别包含 change/money/amount 三个榜单
 
