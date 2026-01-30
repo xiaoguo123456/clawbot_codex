@@ -6,15 +6,17 @@ export type UsQuote = {
   name?: string;
   currency?: string;
   price?: number;
+  prevClose?: number;
   change?: number;
   changePercent?: number;
   timestamp?: number;
+  closes?: number[];
   source: 'yahoo';
 };
 
 export async function getUsQuoteYahoo(symbol: string): Promise<UsQuote> {
   // Yahoo chart endpoint is free but rate-limited.
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`;
   const res = await request(url, {
     headers: {
       'user-agent': 'Mozilla/5.0',
@@ -33,9 +35,14 @@ export async function getUsQuoteYahoo(symbol: string): Promise<UsQuote> {
   if (!meta) throw new Error('yahoo_bad_response');
 
   const price = meta.regularMarketPrice as number | undefined;
-  const prev = meta.chartPreviousClose as number | undefined;
-  const change = (price != null && prev != null) ? price - prev : undefined;
-  const changePercent = (change != null && prev) ? (change / prev) * 100 : undefined;
+  const prevClose = meta.chartPreviousClose as number | undefined;
+  const change = (price != null && prevClose != null) ? price - prevClose : undefined;
+  const changePercent = (change != null && prevClose) ? (change / prevClose) * 100 : undefined;
+
+  const closesRaw = r?.indicators?.quote?.[0]?.close;
+  const closes: number[] | undefined = Array.isArray(closesRaw)
+    ? closesRaw.filter((x: any) => typeof x === 'number')
+    : undefined;
 
   return {
     market: 'us',
@@ -43,9 +50,11 @@ export async function getUsQuoteYahoo(symbol: string): Promise<UsQuote> {
     name: meta.shortName ?? meta.longName,
     currency: meta.currency,
     price,
+    prevClose,
     change,
     changePercent,
     timestamp: meta.regularMarketTime,
+    closes,
     source: 'yahoo',
   };
 }

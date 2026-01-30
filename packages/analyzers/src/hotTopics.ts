@@ -1,12 +1,15 @@
 import type { Report } from '../../core/src/report';
 import { getCnPolicyNews } from '../../data-sources/src/news/cn_policy';
 import type { NewsItem } from '../../data-sources/src/news/types';
+import { assetsForTopic } from './mappings/policyToAssets';
 
 export type HotTopic = {
   title: string;
   tags: string[];
   score: number;
   why: string;
+  sectors?: string[];
+  assets?: Array<{ market: 'cn' | 'us'; symbol: string; name?: string; why: string }>;
   sources: { title?: string; url?: string }[];
 };
 
@@ -59,11 +62,14 @@ export async function getHotTopics(
     .map((c) => {
       const topItems = c.items.slice(0, 3);
       const score = Math.min(0.9, 0.35 + c.items.length * 0.08);
+      const mapped = assetsForTopic(c.key);
       return {
         title: c.title,
         tags: c.tags,
         score,
         why: `过去一段时间在权威新闻源中出现 ${c.items.length} 条相关信息，当前按规则聚类为“${c.title}”。`,
+        sectors: mapped?.sectors,
+        assets: mapped?.assets,
         sources: topItems.map((x) => ({ title: x.title, url: x.url })),
       };
     });
@@ -74,7 +80,8 @@ export async function getHotTopics(
     summary: topics.length ? '已基于权威政策新闻源生成热点（规则聚类版）。' : '当前未拉取到可用新闻数据（可能是源暂时不可用）。',
     bullets: [
       '当前版本：稳定优先，使用权威政策 RSS/Atom + 可解释的规则聚类。',
-      '下一步：补充更多权威源（监管/部委/科技口径），并升级为“去重+聚类+主题命名+关联标的”。',
+      '已加入“主题→行业/标的提示”的规则映射（可解释，便于你后续手工调整）。',
+      '下一步：补充更多权威源（监管/部委/科技口径），并升级为“去重+聚类+主题命名+关联标的（更自动）”。',
     ],
     dataPoints: [
       { name: 'scope', value: scope },

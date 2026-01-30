@@ -82,6 +82,16 @@ bot.command('hot', async (ctx) => {
   for (const t of hot.topics) {
     lines.push(`${t.title}（score ${t.score.toFixed(2)}）`);
     lines.push(`- 解释：${t.why}`);
+    if (t.sectors?.length) {
+      lines.push(`- 可能关联行业：${t.sectors.join('、')}`);
+    }
+    if (t.assets?.length) {
+      lines.push('- 标的提示（规则映射，非推荐）：');
+      for (const a of t.assets.slice(0, 4)) {
+        const name = a.name ? ` ${a.name}` : '';
+        lines.push(`  - ${a.market.toUpperCase()} ${a.symbol}${name}：${a.why}`);
+      }
+    }
     if (t.sources?.length) {
       lines.push('- 参考：');
       for (const s of t.sources.slice(0, 3)) {
