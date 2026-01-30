@@ -20,10 +20,6 @@ npm i
 npm run dev:api
 默认监听：http://localhost:8787
 
-3）启动 Telegram Bot
-设置环境变量 TELEGRAM_BOT_TOKEN
-npm run dev:bot
-
 二、API 示例
 - GET /health
 - GET /quote?market=us&symbol=AAPL

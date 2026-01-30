@@ -42,7 +42,7 @@ export async function analyzeStock(
   try {
     quote = market === 'us' ? await getUsQuoteYahoo(symbol) : await getCnQuoteEastmoney(symbol);
     sources.push({ title: market === 'us' ? 'Yahoo Finance (chart)' : 'Eastmoney (push2)', vendor: quote.source });
-  } catch (e: any) {
+  } catch {
     // 降级：行情失败时仍然给出新闻/公告/热点上下文
     quote = {
       market,
