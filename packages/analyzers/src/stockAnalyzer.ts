@@ -32,18 +32,35 @@ export async function analyzeStock(
   symbol: string,
   style: 'research' | 'trading' | 'both' = 'both'
 ): Promise<Report> {
-  const quote = market === 'us' ? await getUsQuoteYahoo(symbol) : await getCnQuoteEastmoney(symbol);
-
-  const price = quote.price ?? null;
-  const chgPct = quote.changePercent ?? null;
-
+  let quote: any;
   const bullets: string[] = [];
   const risks: string[] = [];
   const catalysts: string[] = [];
   const watch: string[] = [];
-  const sources: ReportSource[] = [
-    { title: market === 'us' ? 'Yahoo Finance (chart)' : 'Eastmoney (push2)', vendor: quote.source },
-  ];
+  const sources: ReportSource[] = [];
+
+  try {
+    quote = market === 'us' ? await getUsQuoteYahoo(symbol) : await getCnQuoteEastmoney(symbol);
+    sources.push({ title: market === 'us' ? 'Yahoo Finance (chart)' : 'Eastmoney (push2)', vendor: quote.source });
+  } catch (e: any) {
+    // 降级：行情失败时仍然给出新闻/公告/热点上下文
+    quote = {
+      market,
+      symbol,
+      name: undefined,
+      price: undefined,
+      prevClose: undefined,
+      change: undefined,
+      changePercent: undefined,
+      source: market === 'us' ? 'yahoo' : 'eastmoney',
+    };
+    bullets.push('注意：行情接口暂时不可用，本次分析未包含最新报价，仅提供新闻/公告/政策热点等证据链。');
+    risks.push('行情接口不可用导致价格/涨跌幅缺失；如需严格数值结论，请稍后重试。');
+    sources.push({ title: '行情接口暂时不可用（降级模式）', vendor: 'degraded', timestamp: new Date().toISOString() });
+  }
+
+  const price = quote.price ?? null;
+  const chgPct = quote.changePercent ?? null;
 
   // Evidence-style data points
   const ret5 = market === 'us' ? calcReturnPct((quote as any).closes, 5) : null;
