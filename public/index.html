@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>clawbot_codex</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="wrap header">
+    <div>
+      <div class="badge">clawbot_codex</div>
+      <h1>你好，郭晓征</h1>
+      <p class="sub">这是一个最小的静态页面骨架：HTML + CSS + JS，后续你想做什么功能都可以在这里继续加。</p>
+    </div>
+    <nav class="nav">
+      <a href="#features">功能</a>
+      <a href="#next">下一步</a>
+      <a href="https://github.com/xiaoguo123456/clawbot_codex" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="card" id="features">
+      <h2>页面包含什么</h2>
+      <ul>
+        <li>一套干净的样式（可直接改色、改字体）</li>
+        <li>一个小组件：本地时间 + 主题切换</li>
+        <li>结构清晰，适合后续扩展成产品页/项目主页</li>
+      </ul>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h3>现在时间</h3>
+        <p class="mono" id="clock">--:--:--</p>
+        <p class="hint">会每秒刷新</p>
+      </div>
+
+      <div class="card">
+        <h3>主题</h3>
+        <p class="hint">点击切换浅色/深色（会记住你的选择）</p>
+        <button class="btn" id="toggleTheme" type="button">切换主题</button>
+      </div>
+
+      <div class="card">
+        <h3>小目标</h3>
+        <p class="hint">你还没想好做啥没关系——先把项目跑起来，后面再加功能。</p>
+        <ol>
+          <li>确定目标：做一个机器人 / 做一个网站 / 做一个API？</li>
+          <li>我可以把它升级为 Vite/React 或 Node 服务</li>
+          <li>加 CI、自动部署到 GitHub Pages</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="card" id="next">
+      <h2>下一步我可以做什么</h2>
+      <div class="actions">
+        <button class="btn secondary" id="copyPlan" type="button">复制一份“下一步计划”</button>
+        <a class="btn" href="https://pages.github.com/" target="_blank" rel="noreferrer">了解 GitHub Pages</a>
+      </div>
+      <p class="hint" id="copyResult"></p>
+    </section>
+
+    <footer class="footer">
+      <span>Made for clawbot_codex</span>
+      <span class="dot">·</span>
+      <span class="mono" id="buildInfo"></span>
+    </footer>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
