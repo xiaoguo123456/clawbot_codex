@@ -118,8 +118,11 @@ export async function analyzeStock(
           const ex = extractCnAnnouncement(it.title, it.content);
           bullets.push(`- ${ex.type}：${ex.title}`);
           for (const kp of ex.keyPoints.slice(0, 2)) bullets.push(`  - ${kp}`);
+          const fieldPairs = Object.entries(ex.fields).slice(0, 3);
+          for (const [k, v] of fieldPairs) bullets.push(`  - ${k}：${v}`);
+
           const nums = ex.numbers.slice(0, 3).map((n) => `${n.name}:${n.value}`).join('，');
-          if (nums) bullets.push(`  - 关键数字：${nums}`);
+          if (nums) bullets.push(`  - 其他数字：${nums}`);
         }
       }
 

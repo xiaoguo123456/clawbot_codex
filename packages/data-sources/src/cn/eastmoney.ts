@@ -39,19 +39,36 @@ export async function getCnQuoteEastmoney(symbol: string): Promise<CnQuote> {
 
   const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${encodeURIComponent(secid)}&fields=${encodeURIComponent(fields)}`;
 
-  const res = await fetch(url, {
-    headers: {
-      'user-agent': 'Mozilla/5.0',
-      'accept': 'application/json,text/plain,*/*',
-      'referer': 'https://quote.eastmoney.com/',
-    },
-    redirect: 'follow',
-  });
+  let lastErr: any;
+  let res: Response | undefined;
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`eastmoney_http_${res.status}: ${txt.slice(0, 200)}`);
+  for (let i = 0; i < 2; i++) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10_000);
+    try {
+      res = await fetch(url, {
+        headers: {
+          'user-agent': 'Mozilla/5.0',
+          'accept': 'application/json,text/plain,*/*',
+          'referer': 'https://quote.eastmoney.com/',
+        },
+        redirect: 'follow',
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`eastmoney_http_${res.status}: ${txt.slice(0, 200)}`);
+      }
+      break;
+    } catch (e: any) {
+      clearTimeout(t);
+      lastErr = e;
+      await new Promise((r) => setTimeout(r, 400 + i * 400));
+    }
   }
+
+  if (!res) throw lastErr ?? new Error('eastmoney_fetch_failed');
 
   const json: any = await res.json();
   const d = json?.data;
