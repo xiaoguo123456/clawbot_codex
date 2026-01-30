@@ -1,6 +1,7 @@
 import type { Report, ReportSource } from '../../core/src/report';
 import { getUsQuoteYahoo } from '../../data-sources/src/us/yahoo';
 import { getCnQuoteEastmoney } from '../../data-sources/src/cn/eastmoney';
+import { getCnNewsAndAnnouncementsEastmoney } from '../../data-sources/src/cn/eastmoney_newsbulletin';
 import { getYahooSymbolNews } from '../../data-sources/src/news/yahoo_symbol';
 
 function safeFixed(n: number | null | undefined, digits = 2): string {
@@ -74,7 +75,7 @@ export async function analyzeStock(
     risks.push('热点驱动行情波动大，追高回撤风险高；建议设置止损与仓位控制。');
   }
 
-  // Add minimal news evidence (stable for US)
+  // News/announcement evidence
   if (market === 'us') {
     try {
       const news = await getYahooSymbolNews(quote.symbol, 3);
@@ -83,6 +84,28 @@ export async function analyzeStock(
         for (const it of news) {
           bullets.push(`- ${it.title}`);
           sources.push({ title: it.title, url: it.url, vendor: it.source, timestamp: it.publishedAt });
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (market === 'cn') {
+    try {
+      const { news, announcements } = await getCnNewsAndAnnouncementsEastmoney(quote.symbol, 3, 3);
+      if (news.length) {
+        bullets.push('相关新闻（东方财富F10）：');
+        for (const it of news) {
+          bullets.push(`- ${it.title}`);
+          sources.push({ title: it.title, url: it.url, vendor: 'eastmoney_f10', timestamp: it.publishedAt });
+        }
+      }
+      if (announcements.length) {
+        bullets.push('近期公告（东方财富F10）：');
+        for (const it of announcements) {
+          bullets.push(`- ${it.title}`);
+          sources.push({ title: it.title, url: it.url, vendor: 'eastmoney_f10', timestamp: it.noticeDate });
         }
       }
     } catch {
