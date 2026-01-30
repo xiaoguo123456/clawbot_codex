@@ -28,6 +28,12 @@ Hot topics
   - 返回：{ ok: true, data: { scope, topics, report } }
   - topics[]：title/score/why + sectors/assets（若有）
 
+Market hot sectors (A股板块热点，独立来源)
+- GET /hot/market?limit=5
+- GET /hot?scope=market&limit=5
+  - 返回：{ ok: true, data: { industry, concept, report } }
+  - industry/concept：分别包含 change/money/amount 三个榜单
+
 备注
 - 端口：默认 8787，可通过环境变量 PORT 覆盖
 - 路由定义位置：apps/api/src/server.ts

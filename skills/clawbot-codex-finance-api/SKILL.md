@@ -34,6 +34,10 @@ style 参数：research | trading | both
 - GET /hot?scope=all&limit=5
 scope：policy | tech | market | all
 
+4）市场热点板块（A股，独立来源）
+- GET /hot/market?limit=5
+说明：按“涨跌幅 / 主力净流入 / 成交额”输出行业板块+概念板块榜单
+
 三、输出策略（对话里怎么用）
 - 先用 /analyze/stock（比单独 quote 信息更全：行情+新闻/公告+风险/催化剂）
 - 用户只问“现在多少钱/涨跌多少”再用 /quote

@@ -5,6 +5,7 @@ import { getUsQuoteYahoo } from '../../../packages/data-sources/src/us/yahoo';
 import { getCnQuoteEastmoney } from '../../../packages/data-sources/src/cn/eastmoney';
 import { analyzeStock } from '../../../packages/analyzers/src/stockAnalyzer';
 import { getHotTopics } from '../../../packages/analyzers/src/hotTopics';
+import { getMarketHotSectors } from '../../../packages/analyzers/src/marketHotSectors';
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
@@ -58,11 +59,33 @@ app.get('/hot', async (req, reply) => {
     .parse((req as any).query);
 
   try {
+    // market scope: use dedicated market hot sectors
+    if (q.scope === 'market') {
+      const data = await getMarketHotSectors(Math.min(10, q.limit));
+      return { ok: true, data };
+    }
+
     const hot = await getHotTopics(q.scope, q.limit);
     return { ok: true, data: hot };
   } catch (e: any) {
     req.log.error(e);
     return reply.status(500).send({ ok: false, error: e?.message ?? 'hot_failed' });
+  }
+});
+
+app.get('/hot/market', async (req, reply) => {
+  const q = z
+    .object({
+      limit: z.coerce.number().int().min(1).max(20).default(5),
+    })
+    .parse((req as any).query);
+
+  try {
+    const data = await getMarketHotSectors(q.limit);
+    return { ok: true, data };
+  } catch (e: any) {
+    req.log.error(e);
+    return reply.status(500).send({ ok: false, error: e?.message ?? 'hot_market_failed' });
   }
 });
 
