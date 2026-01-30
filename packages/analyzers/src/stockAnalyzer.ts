@@ -2,6 +2,8 @@ import type { Report, ReportSource } from '../../core/src/report';
 import { getUsQuoteYahoo } from '../../data-sources/src/us/yahoo';
 import { getCnQuoteEastmoney } from '../../data-sources/src/cn/eastmoney';
 import { getCnNewsAndAnnouncementsEastmoney } from '../../data-sources/src/cn/eastmoney_newsbulletin';
+import { getHotTopics } from './hotTopics';
+import { extractCnAnnouncement } from './extractors/cnAnnouncementExtractor';
 import { getYahooSymbolNews } from '../../data-sources/src/news/yahoo_symbol';
 
 function safeFixed(n: number | null | undefined, digits = 2): string {
@@ -94,6 +96,7 @@ export async function analyzeStock(
   if (market === 'cn') {
     try {
       const { news, announcements } = await getCnNewsAndAnnouncementsEastmoney(quote.symbol, 3, 3);
+
       if (news.length) {
         bullets.push('相关新闻（东方财富F10）：');
         for (const it of news) {
@@ -101,12 +104,39 @@ export async function analyzeStock(
           sources.push({ title: it.title, url: it.url, vendor: 'eastmoney_f10', timestamp: it.publishedAt });
         }
       }
+
       if (announcements.length) {
         bullets.push('近期公告（东方财富F10）：');
         for (const it of announcements) {
           bullets.push(`- ${it.title}`);
           sources.push({ title: it.title, url: it.url, vendor: 'eastmoney_f10', timestamp: it.noticeDate });
         }
+
+        // 结构化提炼（投研证据链）
+        bullets.push('公告要点提炼（规则版）：');
+        for (const it of announcements) {
+          const ex = extractCnAnnouncement(it.title, it.content);
+          bullets.push(`- ${ex.type}：${ex.title}`);
+          for (const kp of ex.keyPoints.slice(0, 2)) bullets.push(`  - ${kp}`);
+          const nums = ex.numbers.slice(0, 3).map((n) => `${n.name}:${n.value}`).join('，');
+          if (nums) bullets.push(`  - 关键数字：${nums}`);
+        }
+      }
+
+      // 关联宏观/政策热点（给“交易环境”上下文）
+      try {
+        const hot = await getHotTopics('policy', 3);
+        if (hot.topics.length) {
+          bullets.push('政策热点背景（当前）：');
+          for (const t of hot.topics.slice(0, 2)) {
+            bullets.push(`- ${t.title}（score ${t.score.toFixed(2)}）`);
+            if (t.sectors?.length) bullets.push(`  - 可能关联行业：${t.sectors.join('、')}`);
+          }
+          // sources: add a lightweight marker
+          sources.push({ title: '政策热点（自动汇总）', vendor: 'hotTopics', timestamp: hot.report.generatedAt });
+        }
+      } catch {
+        // ignore
       }
     } catch {
       // ignore
