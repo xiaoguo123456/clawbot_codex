@@ -71,16 +71,30 @@ bot.command('analyze', async (ctx) => {
 });
 
 bot.command('hot', async (ctx) => {
-  const hot = await getHotTopics('all', 10);
-  const lines = [
+  const hot = await getHotTopics('all', 5);
+
+  const lines: string[] = [
     hot.report.title,
     hot.report.summary,
     '',
-    ...hot.topics.map((t: { title: string; score: number }) => `- ${t.title}（score ${t.score.toFixed(2)}）`),
-    '',
-    '下一步：我会把这里替换为真实新闻聚类后的热点。',
   ];
-  await ctx.reply(lines.join('\n'));
+
+  for (const t of hot.topics) {
+    lines.push(`${t.title}（score ${t.score.toFixed(2)}）`);
+    lines.push(`- 解释：${t.why}`);
+    if (t.sources?.length) {
+      lines.push('- 参考：');
+      for (const s of t.sources.slice(0, 3)) {
+        const title = (s.title ?? '').trim();
+        const url = (s.url ?? '').trim();
+        if (title && url) lines.push(`  - ${title} ${url}`);
+        else if (url) lines.push(`  - ${url}`);
+      }
+    }
+    lines.push('');
+  }
+
+  await ctx.reply(lines.join('\n').slice(0, 3800));
 });
 
 bot.launch().then(() => {
