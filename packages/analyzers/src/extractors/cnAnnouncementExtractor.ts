@@ -120,7 +120,10 @@ function extractFields(type: string, text: string): Record<string, string> {
     const paid = pick(text, /(累计已回购金额|已支付的总金额|支付总金额|已支付金额)[^\d]{0,30}([\d,]+(?:\.\d+)?\s*(?:万|亿)?\s*元)/);
     if (paid) fields['已回购金额'] = paid.replace(/\s+/g, '');
 
-    const priceRange = pick(text, /(实际回购价格区间)[^\d]{0,30}([\d,]+(?:\.\d+)?\s*元\/?股[^\d]{0,10}[—\-~至～]\s*[\d,]+(?:\.\d+)?\s*元\/?股)/);
+    const priceRange = pick(
+      text,
+      /(实际回购价格区间)[^\d]{0,30}([\d,]+(?:\.\d+)?\s*元\/?股\s*[—\-~至～]\s*[\d,]+(?:\.\d+)?\s*元\/?股)/
+    );
     if (priceRange) fields['实际回购价格区间'] = priceRange.replace(/\s+/g, '');
 
     const progressSentence = pick(text, /(截至\s*\d{4}年\d{1,2}月\d{1,2}日[^。；;\n]{10,160})/);
